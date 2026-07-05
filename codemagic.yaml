@@ -1,0 +1,35 @@
+workflows:
+  build-ios:
+    name: Build iOS IPA
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      xcode: "15.4"
+      ios_signing:
+        distribution_type: development
+        bundle_identifier: com.deepseek.chat
+    scripts:
+      - name: Install XcodeGen
+        script: brew install xcodegen
+      - name: Generate Xcode project
+        script: xcodegen generate
+      - name: Build IPA
+        script: |
+          xcodebuild \
+            -project DeepSeekChat.xcodeproj \
+            -scheme DeepSeekChat \
+            -sdk iphoneos \
+            -configuration Release \
+            -archivePath $CM_BUILD_DIR/DeepSeekChat.xcarchive \
+            archive \
+            -allowProvisioningUpdates
+      - name: Export IPA
+        script: |
+          xcodebuild \
+            -exportArchive \
+            -archivePath $CM_BUILD_DIR/DeepSeekChat.xcarchive \
+            -exportOptionsPlist exportOptions.plist \
+            -exportPath $CM_BUILD_DIR/ipa \
+            -allowProvisioningUpdates
+    artifacts:
+      - ipa/*.ipa

@@ -1,0 +1,24 @@
+name: DeepSeekChat
+options:
+  bundleIdPrefix: com.deepseek.chat
+  deploymentTarget:
+    iOS: "16.0"
+  xcodeVersion: "15.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    TARGETED_DEVICE_FAMILY: "1"
+    INFOPLIST_FILE: DeepSeekChat/Info.plist
+targets:
+  DeepSeekChat:
+    type: application
+    platform: iOS
+    sources:
+      - DeepSeekChat
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.deepseek.chat
+        DEVELOPMENT_TEAM: ""
+        CODE_SIGN_STYLE: Automatic
+    info:
+      path: DeepSeekChat/Info.plist
