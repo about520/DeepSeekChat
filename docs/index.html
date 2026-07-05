@@ -207,6 +207,21 @@
     color: #9499a0; font-size: 14px; gap: 8px;
   }
   .bili-frame-wrap .blocked-hint.show { display: flex; }
+  .bili-panel.bili-fs {
+    position: fixed; inset: 0; z-index: 9999;
+    border-radius: 0; margin: 0; min-width: 0;
+  }
+  .bili-panel.bili-fs .bili-header, .bili-panel.bili-fs .bili-url-bar { display: none; }
+  .bili-panel.bili-fs .bili-frame-wrap {
+    position: fixed; inset: 0; z-index: 9998;
+  }
+  .fs-btn {
+    background: none; border: 1px solid #e3e5e7;
+    color: #61666d; cursor: pointer; padding: 6px 10px;
+    border-radius: 8px; font-size: 18px; line-height: 1;
+    transition: all .2s;
+  }
+  .fs-btn:hover { background: #e3e5e7; }
 
   /* ===== 响应式 ===== */
   @media (max-width: 900px) {
@@ -253,9 +268,10 @@
   <div class="bili-url-bar">
     <input type="text" id="biliUrl" value="https://www.bilibili.com" placeholder="输入哔哩哔哩链接...">
     <button onclick="navigateBili()">前往</button>
+    <button class="fs-btn" onclick="toggleBiliFullscreen()" title="全屏">⛶</button>
   </div>
   <div class="bili-frame-wrap" id="biliWrap">
-    <iframe id="biliFrame" src="https://www.bilibili.com" sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-top-navigation"></iframe>
+    <iframe id="biliFrame" src="https://www.bilibili.com" allowfullscreen="true" allow="fullscreen; autoplay; encrypted-media; picture-in-picture" sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-top-navigation allow-presentation"></iframe>
     <div class="blocked-hint" id="blockedHint">
       <span style="font-size:40px;">🔒</span>
       <span>哔哩哔哩可能禁止嵌入，请在新窗口打开</span>
@@ -391,6 +407,27 @@
     if (!url.startsWith('http')) url = 'https://' + url;
     biliFrame.src = url;
     blockedHint.classList.remove('show');
+  }
+
+  let biliInFS = false;
+  function toggleBiliFullscreen() {
+    const panel = document.querySelector('.bili-panel');
+    const fsBtn = document.querySelector('.fs-btn');
+    biliInFS = !biliInFS;
+    if (biliInFS) {
+      panel.classList.add('bili-fs');
+      fsBtn.textContent = '✕';
+      fsBtn.title = '退出全屏';
+      document.body.style.overflow = 'hidden';
+      // 将 iframe 移到 body 下以确保全屏覆盖
+      document.body.appendChild(biliFrame);
+    } else {
+      panel.classList.remove('bili-fs');
+      fsBtn.textContent = '⛶';
+      fsBtn.title = '全屏';
+      document.body.style.overflow = '';
+      document.getElementById('biliWrap').appendChild(biliFrame);
+    }
   }
 
   // 自动调整输入框高度
