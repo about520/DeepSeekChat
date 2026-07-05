@@ -1,0 +1,57 @@
+name: Build iOS IPA
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build IPA
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+        run: |
+          xcodebuild \
+            -project DeepSeekChat.xcodeproj \
+            -scheme DeepSeekChat \
+            -sdk iphoneos \
+            -configuration Release \
+            -archivePath ${{ runner.temp }}/DeepSeekChat.xcarchive \
+            archive \
+            CODE_SIGN_STYLE=Automatic \
+            -allowProvisioningUpdates \
+            -authenticationKeyIssuerID "" \
+            -authenticationKeyID "" \
+            DEVELOPMENT_TEAM=${{ secrets.DEVELOPMENT_TEAM }} \
+            || true
+
+      - name: Export IPA
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+        run: |
+          xcodebuild \
+            -exportArchive \
+            -archivePath ${{ runner.temp }}/DeepSeekChat.xcarchive \
+            -exportOptionsPlist exportOptions.plist \
+            -exportPath ${{ runner.temp }}/ipa \
+            -allowProvisioningUpdates \
+            CODE_SIGN_STYLE=Automatic \
+            DEVELOPMENT_TEAM=${{ secrets.DEVELOPMENT_TEAM }}
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: DeepSeekChat.ipa
+          path: ${{ runner.temp }}/ipa/*.ipa

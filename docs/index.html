@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<title>DeepSeek AI</title>
+
+<!-- PWA / iOS 主屏幕支持 -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="DeepSeek AI">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#f5f5f7">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<style>
+  :root {
+    --ios-bg: #f5f5f7;
+    --ios-blue: #007aff;
+    --bubble-sent: #007aff;
+    --bubble-recv: #e9e9eb;
+    --text-primary: #1d1d1f;
+    --text-secondary: #86868b;
+    --border: #d1d1d6;
+    --card-bg: #ffffff;
+    --shadow: 0 1px 3px rgba(0,0,0,.08);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+    background: #000;
+    height: 100vh; width: 100vw;
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* ===== 左侧 AI 面板 ===== */
+  .ai-panel {
+    flex: 1; min-width: 420px;
+    display: flex; flex-direction: column;
+    background: var(--ios-bg);
+    border-right: 1px solid #333;
+  }
+  .ai-header {
+    padding: 16px 20px;
+    background: rgba(255,255,255,.72);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .ai-header .dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
+  .dot.red { background:#ff5f57; } .dot.yellow { background:#febc2e; } .dot.green { background:#28c840; }
+  .ai-header h1 {
+    font-size: 17px; font-weight: 600; color: var(--text-primary);
+    margin-left: 8px; flex:1;
+  }
+  .ai-header .model-badge {
+    font-size: 11px; font-weight: 500;
+    background: #e8f0fe; color: var(--ios-blue);
+    padding: 4px 10px; border-radius: 20px;
+  }
+  .api-key-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 20px;
+    background: #fff; border-bottom: 1px solid var(--border);
+  }
+  .api-key-row input {
+    flex:1; padding: 8px 12px; font-size: 13px;
+    border: 1px solid var(--border); border-radius: 10px;
+    background: var(--ios-bg); outline: none;
+  }
+  .api-key-row input:focus { border-color: var(--ios-blue); }
+  .api-key-row button {
+    padding: 8px 16px; font-size: 13px; font-weight: 500;
+    border: none; border-radius: 10px;
+    background: var(--ios-blue); color: #fff; cursor: pointer;
+    white-space: nowrap;
+  }
+  .api-key-row button:hover { opacity: .85; }
+
+  .chat-area {
+    flex:1; overflow-y:auto; padding: 20px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .chat-area::-webkit-scrollbar { width:5px; }
+  .chat-area::-webkit-scrollbar-thumb { background:#c1c1c6; border-radius:10px; }
+
+  .message {
+    max-width: 75%; padding: 11px 16px;
+    font-size: 15px; line-height: 1.45;
+    border-radius: 18px;
+    animation: msgIn .25s ease-out;
+    word-break: break-word;
+  }
+  @keyframes msgIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  .message.user {
+    align-self: flex-end;
+    background: var(--bubble-sent); color: #fff;
+    border-bottom-right-radius: 6px;
+  }
+  .message.ai {
+    align-self: flex-start;
+    background: var(--bubble-recv); color: var(--text-primary);
+    border-bottom-left-radius: 6px;
+  }
+  .message.ai pre {
+    background: #1c1c1e; color: #e0e0e0; padding: 12px;
+    border-radius: 10px; overflow-x: auto; margin-top: 6px;
+    font-size: 13px; line-height: 1.4;
+  }
+  .message.ai code { font-family: "SF Mono", "Fira Code", monospace; font-size: 13px; }
+
+  .input-area {
+    padding: 14px 20px;
+    background: rgba(255,255,255,.72);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    display: flex; gap: 10px; align-items: flex-end;
+  }
+  .input-area textarea {
+    flex:1; padding: 10px 14px; font-size: 15px;
+    border: 1px solid var(--border); border-radius: 20px;
+    background: #fff; outline: none; resize: none;
+    max-height: 120px; line-height: 1.4;
+    font-family: inherit;
+    transition: border-color .2s;
+  }
+  .input-area textarea:focus { border-color: var(--ios-blue); }
+  .input-area textarea::placeholder { color: #c7c7cc; }
+  .send-btn {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: var(--ios-blue); border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .15s, opacity .15s;
+  }
+  .send-btn:hover { transform: scale(1.05); opacity: .9; }
+  .send-btn:active { transform: scale(.95); }
+  .send-btn svg { width: 18px; height: 18px; fill: #fff; }
+  .send-btn:disabled { background: #a1a1a6; cursor: not-allowed; }
+
+  .typing-indicator {
+    align-self: flex-start;
+    background: var(--bubble-recv); border-radius: 18px;
+    border-bottom-left-radius: 6px;
+    padding: 14px 18px;
+    display: flex; gap: 5px;
+  }
+  .typing-indicator span {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #98989d; animation: bounce 1.2s infinite;
+  }
+  .typing-indicator span:nth-child(2) { animation-delay: .15s; }
+  .typing-indicator span:nth-child(3) { animation-delay: .3s; }
+  @keyframes bounce { 0%,60%,100% { transform:translateY(0); } 30% { transform:translateY(-8px); } }
+
+  /* ===== 右侧哔哩哔哩面板 ===== */
+  .bili-panel {
+    flex: 1; min-width: 420px;
+    display: flex; flex-direction: column;
+    background: #fff;
+  }
+  .bili-header {
+    padding: 14px 20px;
+    background: #fff;
+    border-bottom: 1px solid #e3e5e7;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .bili-logo {
+    width: 32px; height: 32px; background: #fb7299;
+    border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 700; color: #fff;
+  }
+  .bili-header h2 { font-size: 16px; font-weight: 600; color: #18191c; }
+  .bili-url-bar {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 16px; background: #f6f7f8;
+    border-bottom: 1px solid #e3e5e7;
+  }
+  .bili-url-bar input {
+    flex:1; padding: 7px 12px; font-size: 13px;
+    border: 1px solid #e3e5e7; border-radius: 8px;
+    outline: none; background: #fff;
+    font-family: inherit;
+  }
+  .bili-url-bar input:focus { border-color: #fb7299; }
+  .bili-url-bar button {
+    padding: 7px 14px; font-size: 13px; font-weight: 500;
+    border: none; border-radius: 8px;
+    background: #fb7299; color: #fff; cursor: pointer;
+    white-space: nowrap;
+  }
+  .bili-url-bar button:hover { opacity: .9; }
+  .bili-frame-wrap {
+    flex:1; position: relative; background: #f6f7f8;
+  }
+  .bili-frame-wrap iframe {
+    width: 100%; height: 100%; border: none;
+  }
+  .bili-frame-wrap .blocked-hint {
+    display: none;
+    position: absolute; inset:0;
+    background: #f6f7f8;
+    flex-direction: column; align-items: center; justify-content: center;
+    color: #9499a0; font-size: 14px; gap: 8px;
+  }
+  .bili-frame-wrap .blocked-hint.show { display: flex; }
+
+  /* ===== 响应式 ===== */
+  @media (max-width: 900px) {
+    body { flex-direction: column; }
+    .ai-panel, .bili-panel { min-width: unset; flex: none; height: 50vh; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ====== 左侧 AI 面板 ====== -->
+<div class="ai-panel">
+  <div class="ai-header">
+    <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+    <h1>DeepSeek AI</h1>
+    <span class="model-badge">deepseek-chat</span>
+  </div>
+
+  <div class="api-key-row">
+    <input type="password" id="apiKeyInput" placeholder="输入 DeepSeek API Key（sk-...）" autocomplete="off">
+    <button onclick="setApiKey()">设置</button>
+  </div>
+
+  <div class="chat-area" id="chatArea">
+    <div class="message ai">
+      你好，我是 DeepSeek AI。在顶部输入你的 API Key 后即可开始对话。右侧可以浏览哔哩哔哩。
+    </div>
+  </div>
+
+  <div class="input-area">
+    <textarea id="userInput" rows="1" placeholder="输入消息..." onkeydown="handleKey(event)"></textarea>
+    <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled>
+      <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- ====== 右侧哔哩哔哩面板 ====== -->
+<div class="bili-panel">
+  <div class="bili-header">
+    <div class="bili-logo">B</div>
+    <h2>哔哩哔哩</h2>
+  </div>
+  <div class="bili-url-bar">
+    <input type="text" id="biliUrl" value="https://www.bilibili.com" placeholder="输入哔哩哔哩链接...">
+    <button onclick="navigateBili()">前往</button>
+  </div>
+  <div class="bili-frame-wrap" id="biliWrap">
+    <iframe id="biliFrame" src="https://www.bilibili.com" sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-top-navigation"></iframe>
+    <div class="blocked-hint" id="blockedHint">
+      <span style="font-size:40px;">🔒</span>
+      <span>哔哩哔哩可能禁止嵌入，请在新窗口打开</span>
+      <a href="https://www.bilibili.com" target="_blank" style="color:#fb7299;margin-top:4px;">在浏览器中打开 →</a>
+    </div>
+  </div>
+</div>
+
+<script>
+  const chatArea = document.getElementById('chatArea');
+  const userInput = document.getElementById('userInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const apiKeyInput = document.getElementById('apiKeyInput');
+  const biliFrame = document.getElementById('biliFrame');
+  const blockedHint = document.getElementById('blockedHint');
+  const biliUrl = document.getElementById('biliUrl');
+
+  let apiKey = localStorage.getItem('ds_api_key') || '';
+  let messages = [];
+
+  if (apiKey) {
+    apiKeyInput.value = apiKey;
+    sendBtn.disabled = false;
+  }
+
+  // B站 iframe 加载检测
+  biliFrame.onerror = () => blockedHint.classList.add('show');
+  biliFrame.onload = () => {
+    try {
+      // 尝试检测是否真的加载了
+      const doc = biliFrame.contentDocument || biliFrame.contentWindow.document;
+      if (!doc || doc.location.href === 'about:blank') {
+        blockedHint.classList.add('show');
+      }
+    } catch(e) {
+      // 跨域访问被拒，但页面可能已加载
+    }
+  };
+
+  function setApiKey() {
+    const key = apiKeyInput.value.trim();
+    if (!key) return;
+    apiKey = key;
+    localStorage.setItem('ds_api_key', key);
+    sendBtn.disabled = false;
+    addMessage('ai', 'API Key 已设置，现在可以开始对话了。');
+  }
+
+  function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  }
+
+  async function sendMessage() {
+    const text = userInput.value.trim();
+    if (!text || !apiKey) return;
+
+    addMessage('user', text);
+    userInput.value = '';
+    userInput.style.height = 'auto';
+    sendBtn.disabled = true;
+    showTyping();
+
+    messages.push({ role: 'user', content: text });
+
+    try {
+      const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: messages,
+          stream: false
+        })
+      });
+
+      removeTyping();
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        const msg = err.error?.message || `请求失败 (${res.status})`;
+        addMessage('ai', `错误：${msg}`);
+      } else {
+        const data = await res.json();
+        const reply = data.choices?.[0]?.message?.content || '（无响应）';
+        messages.push({ role: 'assistant', content: reply });
+        addMessage('ai', reply);
+      }
+    } catch(e) {
+      removeTyping();
+      addMessage('ai', `网络错误：${e.message}`);
+    }
+
+    sendBtn.disabled = false;
+  }
+
+  function addMessage(role, text) {
+    const div = document.createElement('div');
+    div.className = `message ${role}`;
+
+    // 简单 Markdown 渲染：代码块
+    text = text.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+    text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+    text = text.replace(/\n/g, '<br>');
+
+    div.innerHTML = text;
+    chatArea.appendChild(div);
+    chatArea.scrollTop = chatArea.scrollHeight;
+  }
+
+  function showTyping() {
+    const div = document.createElement('div');
+    div.className = 'typing-indicator';
+    div.id = 'typing';
+    div.innerHTML = '<span></span><span></span><span></span>';
+    chatArea.appendChild(div);
+    chatArea.scrollTop = chatArea.scrollHeight;
+  }
+
+  function removeTyping() {
+    const el = document.getElementById('typing');
+    if (el) el.remove();
+  }
+
+  function navigateBili() {
+    let url = biliUrl.value.trim();
+    if (!url) return;
+    if (!url.startsWith('http')) url = 'https://' + url;
+    biliFrame.src = url;
+    blockedHint.classList.remove('show');
+  }
+
+  // 自动调整输入框高度
+  userInput.addEventListener('input', () => {
+    userInput.style.height = 'auto';
+    userInput.style.height = Math.min(userInput.scrollHeight, 120) + 'px';
+  });
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
